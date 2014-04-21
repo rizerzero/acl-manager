@@ -43,12 +43,12 @@ $acl->addRole('admin');
 $acl->addRoles(array('publisher', 'validator'));
 
 // You can use inheritance
-$publisher = $acl->getRole('publisher');
-$publisher->addParent('admin');
+$acl->getRole('publisher')->addParent('admin');
+$admin->addParent('root');
 ```
 
 
-#### Create Resource
+#### Create Resources
 ```php
 // Create Resource
 $readNews = new \Acl\Resource('read', 'news');
@@ -60,7 +60,7 @@ $acl->addResources(array(
 
 // Or with string (the defaut module is "global")
 $acl->addResource('login');
-$acl->addResources('connect', 'contact', 'profil');
+$acl->addResources(array('connect', 'contact', 'profil'));
 ```
 
 
@@ -85,13 +85,15 @@ $resource->deny($role);
 // Now, you can check right
 // With the Acl object
 $result = $acl->isAllowed($admin, $readNews);
-$result = $acl->isAllowed('admin', 'read', 'news');
-$result = $acl->isAllowed('role', 'resource', 'module');
 if ($result) {
     echo "Allow";
 } else {
     echo "Deny";
 }
+// Or
+$acl->isAllowed('admin', 'read', 'news');
+$acl->isAllowed('roleName', 'resourceName', 'moduleName');
+
 
 // With the Role object
 $admin->isAllowed($readNews);
@@ -102,4 +104,62 @@ $role->isAllowed('resourceName');
 $readNews->isAllowed($admin);
 $resource->isAllowed($role);
 $resource->isAllowed('roleName');
+```
+
+
+## Persistance
+
+You can save/restore role and his rights with `toArray()` and `fromArray()`.
+Use `json_encode()` or `json_decode()` to convert to string.
+
+#### Save
+ 
+```php
+// Get the role
+$roleName = 'admin';
+$role = $acl->getRole($roleName);
+
+// Save it
+if ($role !== null) {
+    // Convert role to string
+    $rights = json_encode($role->toArray());
+
+    // Save it in SQL
+    $query = $pdo->prepare("UPDATE member
+                                SET acl=:acl 
+                                WHERE username=:username
+                                LIMIT 1;
+                            ");
+    $query->execute(array(
+                        'username' => $roleName,
+                        'acl' => $rights
+}
+```
+
+#### Restore
+
+```php
+$roleName = 'admin';
+
+// Get role from DB
+$query = $pdo->prepare("SELECT acl 
+                            FROM member
+                            WHERE username=:username
+                            LIMIT 1;
+                        ");
+$query->execute(array('username' => $roleName));
+
+// $roleString contain JSON string
+$roleString = $query->fetchColumn();
+
+// Convert to array
+$roleArray = json_decode($roleString);
+
+// Create a role and inject in ACL
+$role = \Acl\Role::fromArray($roleArray);
+$acl->addRole($role);
+
+// You can change the role name
+$role_model = \Acl\Role::fromArray($roleArray, 'modelAdmin');
+$acl->addRole($role_model);
 ```

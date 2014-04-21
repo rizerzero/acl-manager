@@ -6,6 +6,7 @@
  */
 
 namespace Acl;
+
 use \Acl\Role       as Role;
 
 class Resource
@@ -66,7 +67,7 @@ class Resource
 
     /**
      * Check if role can access to this resource
-     * @param Role $role The role to check
+     * @param Acl\Role $role The role to check
      * @return boolean Allow or deny
      */
     public function isAllowed(Role $role)
